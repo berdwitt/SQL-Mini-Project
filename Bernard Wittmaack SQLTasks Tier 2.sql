@@ -173,12 +173,62 @@ QUESTIONS:
 /* Q10: Produce a list of facilities with a total revenue less than 1000.
 The output of facility name and total revenue, sorted by revenue. Remember
 that there's a different cost for guests and members! */
+SELECT
+`facility name`,
+SUM(`cost`) AS "revenue"
+FROM
+Members AS M
+INNER JOIN (
+	SELECT
+	B.memid,
+	F.name AS "facility name",
+	CASE 
+		WHEN B.memid = 0 THEN B.slots * F.guestcost
+		ELSE B.slots * F.membercost
+	END AS "cost"
+	FROM
+	Bookings AS B
+	INNER JOIN Facilities AS F ON F.facid = B.facid
+) bookings_all ON bookings_all.memid = M.memid
+GROUP BY `facility name`
+HAVING SUM(`cost`) < 1000
+ORDER BY `revenue`
+
 
 /* Q11: Produce a report of members and who recommended them in alphabetic surname,firstname order */
-
+SELECT
+M.surname || " " || M.firstname  AS "member name",
+CASE
+	WHEN R.memid > 0 THEN R.firstname || " " || R.surname 
+	ELSE 'None'
+END AS "recommended by"
+FROM
+Members AS M
+LEFT JOIN Members AS R ON R.memid = M.recommendedby
+ORDER BY M.surname, M.firstname
 
 /* Q12: Find the facilities with their usage by member, but not guests */
-
+SELECT
+F.name AS `facility name`,
+MAX(M.firstname || " " || M.surname) AS `member name`,
+COUNT(DISTINCT B.bookid) AS `count of bookings`
+FROM
+Members AS M
+INNER JOIN Bookings AS B ON B.memid = M.memid
+INNER JOIN Facilities AS F ON F.facid = B.facid
+WHERE
+M.memid > 0
+GROUP BY F.name, M.memid
 
 /* Q13: Find the facilities usage by month, but not guests */
-
+SELECT
+F.name AS `facility name`,
+strftime('%m', B.starttime) AS `month`,
+COUNT(DISTINCT B.bookid) AS `count of bookings`
+FROM
+Members AS M
+INNER JOIN Bookings AS B ON B.memid = M.memid
+INNER JOIN Facilities AS F ON F.facid = B.facid
+WHERE
+M.memid > 0
+GROUP BY F.name, strftime('%m', B.starttime)
